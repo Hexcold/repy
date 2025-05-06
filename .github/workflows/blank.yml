@@ -1,19 +1,32 @@
-name: Notify Repository Y
+name: Sync Repos
 
 on:
-  push:
-    branches:
-      - master  # Aciona o workflow quando houver um push na branch master
+  repository_dispatch:
+    types: [sync-repo]  # Evento disparado pelo repositório X
 
 jobs:
-  notify:
-    runs-on: ubuntu-latest  # Ambiente para rodar o workflow
+  sync:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger sync on Repository Y
+      # Passo 1: Faz checkout do repositório Y
+      - name: Checkout Repository Y
+        uses: actions/checkout@v4  # Usando a versão mais recente do checkout
+
+      # Passo 2: Sincronizar com o repositório X
+      - name: Sync with Repository X
+        env:
+          REPO_X: 'https://github.com/Hexcold/repx.git'  # URL do repositório X
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Token de autenticação
         run: |
-          # Envia uma solicitação POST para o GitHub API para disparar o evento no repositório Y
-          curl -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -d '{"event_type": "sync-repo"}' \
-            https://api.github.com/repos/Hexcold/repy/dispatches
+          # Adiciona o repositório X como remoto
+          git remote add repo-x $REPO_X
+
+          # Puxa as últimas alterações da branch master do repositório X
+          git fetch repo-x master
+
+          # Faz o merge das alterações do repositório X na branch master do repositório Y
+          git merge repo-x/master --allow-unrelated-histories -m "Sync with master branch of repx"
+
+          # Empurra as mudanças para o repositório Y
+          git push origin master
